@@ -75,10 +75,8 @@ router.delete("/:id", async (req, res) => {
     }
     // This needs an authorization check
     const note = await Note.findByIdAndDelete(req.params.id);
-    if (!note) {
-      return res.status(404).json({ message: "No note found with this id!" });
-    }
-    res.json({ message: "Note deleted!" });
+
+    res.json(note);
   } catch (err) {
     res.status(500).json(err);
   }
