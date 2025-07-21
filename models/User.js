@@ -16,24 +16,31 @@ const userSchema = new Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: function () {
+      return !this.githubId; // Only require password for local auth
+    },
     minlength: 5,
+  },
+  // Add GitHub specific fields
+  githubId: {
+    type: String,
+    sparse: true,
+    unique: true,
   },
 });
 
-// hash user password
+// Only hash password if it exists and was modified
 userSchema.pre("save", async function (next) {
-  if (this.isNew || this.isModified("password")) {
+  if (this.password && (this.isNew || this.isModified("password"))) {
     const saltRounds = 10;
     this.password = await bcrypt.hash(this.password, saltRounds);
   }
-
   next();
 });
 
-// custom method to compare and validate password for logging in
+// Only validate password if it exists
 userSchema.methods.isCorrectPassword = async function (password) {
-  return bcrypt.compare(password, this.password);
+  return this.password ? bcrypt.compare(password, this.password) : false;
 };
 
 const User = mongoose.model("User", userSchema);
