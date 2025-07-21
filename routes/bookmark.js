@@ -1,48 +1,62 @@
-import mongoose, { Schema } from "mongoose";
-import bcrypt from "bcrypt";
+import express from "express";
+import { authMiddleware } from "../utils/auth.js";
+import Bookmark from "../models/Bookmark.js";
 
-const userSchema = new Schema({
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    match: [/.+@.+\..+/, "Must use a valid email address"],
-  },
-  password: {
-    type: String,
-    required: function() {
-      return !this.githubId; // Only require password for local auth
-    },
-    minlength: 5,
-  },
-  // Add GitHub specific fields
-  githubId: {
-    type: String,
-    sparse: true,
-    unique: true
+const router = express.Router();
+
+// Get all bookmarks for a user
+router.get("/", authMiddleware, async (req, res) => {
+  try {
+    const bookmarks = await Bookmark.find({ user: req.user._id })
+      .populate("note")
+      .sort({ createdAt: -1 });
+    res.json(bookmarks);
+  } catch (err) {
+    res.status(400).json(err);
   }
 });
 
-// Only hash password if it exists and was modified
-userSchema.pre("save", async function (next) {
-  if (this.password && (this.isNew || this.isModified("password"))) {
-    const saltRounds = 10;
-    this.password = await bcrypt.hash(this.password, saltRounds);
+// Create a bookmark
+router.post("/", authMiddleware, async (req, res) => {
+  try {
+    const bookmark = await Bookmark.create({
+      ...req.body,
+      user: req.user._id
+    });
+    res.status(201).json(bookmark);
+  } catch (err) {
+    res.status(400).json(err);
   }
-  next();
 });
 
-// Only validate password if it exists
-userSchema.methods.isCorrectPassword = async function (password) {
-  return this.password ? bcrypt.compare(password, this.password) : false;
-};
+// Delete a bookmark
+router.delete("/:id", authMiddleware, async (req, res) => {
+  try {
+    await Bookmark.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user._id
+    });
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json(err);
+  }
+});
 
-const User = mongoose.model("User", userSchema);
+// Example of bookmark toggling in React component
+// const toggleBookmark = async (noteId) => {
+//   try {
+//     if (isBookmarked) {
+//       await axios.delete(`/api/bookmarks/${bookmarkId}`);
+//     } else {
+//       await axios.post('/api/bookmarks', { 
+//         note: noteId,
+//         folder: 'Default'
+//       });
+//     }
+//     // Update UI state
+//   } catch (error) {
+//     console.error('Error toggling bookmark:', error);
+//   }
+// };
 
-export default User;
+export default router;
