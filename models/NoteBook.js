@@ -1,15 +1,11 @@
 import mongoose, { Schema } from "mongoose";
 
 // This is the model you will be modifying
-const noteSchema = new Schema({
-  title: {
+const noteBookSchema = new Schema({
+  name: {
     type: String,
     required: true,
     trim: true,
-  },
-  content: {
-    type: String,
-    required: true,
   },
   createdAt: {
     type: Date,
@@ -20,12 +16,14 @@ const noteSchema = new Schema({
     ref: "User",
     required: true,
   },
-  notebook: {
-    type: Schema.Types.ObjectId,
-    ref: "NoteBook",
-  },
+  notes: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Note",
+    },
+  ],
 });
 
-const Note = mongoose.model("Note", noteSchema);
+const NoteBook = mongoose.model("NoteBook", noteBookSchema);
 
-export default Note;
+export default NoteBook;
